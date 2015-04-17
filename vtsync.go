@@ -2,6 +2,12 @@ package main
 import "code.google.com/p/govt/vt"
 import "code.google.com/p/govt/vt/vtclnt"
 import "fmt"
+import "net"
+import "flag"
+
+var addr = flag.String("addr", ":7777", "port to listen");
+var serve = flag.Bool("serve", true, "whether to listen");
+var venti = flag.String("venti", "localhost:17034", "local venti");
 
 // /usr/drh/src/ventirc.vac
 var score = "552dd1ba32295a3daf3925aa4438adb3ed936f18";
@@ -97,8 +103,38 @@ func walk(src *vtclnt.Clnt, dst *vtclnt.Clnt,
 	return nil;
 }
 
+// copied from vtclnt.Connect,
+// so we can use our own socket
+func vtconnect(clnt *vtclnt.Clnt) *vt.Error {
+	req := clnt.ReqAlloc()
+	req.Done = make(chan *vtclnt.Req)
+	tc := &req.Tc
+	tc.Id = vt.Thello
+	tc.Version = "02"
+	tc.Uid = "anonymous"
+	tc.Strength = 0
+	tc.Crypto = make([]byte, 0)
+	tc.Codec = tc.Crypto
+
+	e := clnt.Rpcnb(req)
+	if e != nil {
+		return e
+	}
+
+	<-req.Done
+	defer clnt.ReqFree(req)
+
+	if req.Err != nil {
+		return req.Err
+	}
+
+	return nil;
+}
+
 func main(){
-	src, e := vtclnt.Connect("tcp", "localhost:17034");
+	flag.Parse();
+
+	src, e := vtclnt.Connect("tcp", *venti);
 	if(e != nil){
 		fmt.Println("could not connect to src: ", e);
 		return;
@@ -108,6 +144,20 @@ func main(){
 		fmt.Println("could not connect to src: ", e);
 		return;
 	}
+
+	clntpipe, listenpipe := net.Pipe();
+
+	if(*serve){
+		go listendispatch(listenpipe, *venti, *addr);
+	}
+
+	var args = flag.Args();
+	for i := range args {
+		go dialdispatch(listenpipe, *venti, args[i]);
+	}
+
+	clnt := vtclnt.NewClnt(clntpipe);
+	vtconnect(clnt);
 
 	myscore, _ := readscore(score);
 
