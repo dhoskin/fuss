@@ -79,8 +79,8 @@ func sync2wire(buf []byte, msg *Syncmsg) int{
 		break;
 	}
 
-	n := uint16(len(buf) - len(buf2) - 2)
-	vt.Pint16(n, buf);
+	n := uint16(len(buf) - len(buf2))
+	vt.Pint16(n - 2, buf);
 
 	return int(n);
 }
@@ -96,9 +96,9 @@ func gotsyncscore(clnt *vtclnt.Clnt, msg *Syncmsg){
 		fmt.Println("gotsyncscore walk: ", e)
 		return
 	}
-	/* XXX add to score table */
+	Self.Tagchan <- Tag{msg.Name, msg.Score}
 	fmt.Println("gotsyncscore ", msg.Score,
-		" from ", msg.Peer.Addr);
+		" from ", msg.Peer.Name);
 }
 
 func onsyncmsg(clnt *vtclnt.Clnt, msg *Syncmsg){
@@ -110,13 +110,9 @@ func onsyncmsg(clnt *vtclnt.Clnt, msg *Syncmsg){
 	}
 }
 
-/* We'll need another chan here. */
-/* scorechan and peerchan? */
 /* Still possibly a separate scoremanager interface / proc. */
-/* Interactions: */
-/* Receive syncmsg, simple dispatch. */
-/* New peer from listen() but without full Tpeer yet */
-/* Sync successfully enrolled score in scorelist. */
+/* We need a way to read/write scorelist. */
+/* Possibly just store it in venti and read/write rootscore? */
 func syncproc(peerchan chan *Peer, tagchan chan Tag){
 	var peers = make(map[string]*Peer)
 	var scores = make(map[string]vt.Score)
@@ -125,9 +121,15 @@ func syncproc(peerchan chan *Peer, tagchan chan Tag){
 	for {
 		select {
 		case peer := <- peerchan:
+			/* check if we already have this peer! */
+			/* implement deletion (some field?) */
 			peers[peer.Name] = peer
+			/* read out peers to peer */
+			/* read out tags to peer */
+			/* read out peer to peers */
 		case tag := <- tagchan:
 			scores[tag.Name] = tag.Score
+			/* read out tag to peers */
 		}
 	}
 }
