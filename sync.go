@@ -34,6 +34,16 @@ func (s *Syncmsg) String() string {
 	}
 }
 
+func tag2syncmsg(t Tag) *Syncmsg {
+	s := new(Syncmsg)
+
+	s.Id = Thash
+	s.Name = t.Name
+	s.Score = t.Score
+
+	return s
+}
+
 func syncparse(buf []byte) *Syncmsg {
 	var msg *Syncmsg
 
@@ -110,6 +120,29 @@ func onsyncmsg(clnt *vtclnt.Clnt, msg *Syncmsg){
 	}
 }
 
+func sendtagmsg(peer *Peer, msg *Syncmsg){
+	select {
+	case peer.Msgchan <- msg:
+	default:
+		go func(c chan *Syncmsg, m *Syncmsg){
+			c <- m
+		}(peer.Msgchan, msg)
+	}
+}
+
+func sendtag2peers(peers map[string]*Peer, tag Tag){
+	msg := tag2syncmsg(tag)
+	for _, peer := range peers {
+		sendtagmsg(peer, msg)
+	}
+}
+
+func sendall2peer(peer *Peer, peers map[string]*Peer, scores map[string]vt.Scire){
+	/* read out peers to peer */
+	/* read out tags to peer */
+	/* read out peer to peers */
+}
+
 /* Still possibly a separate scoremanager interface / proc. */
 /* We need a way to read/write scorelist. */
 /* Possibly just store it in venti and read/write rootscore? */
@@ -124,24 +157,15 @@ func syncproc(peerchan chan *Peer, tagchan chan Tag){
 			/* check if we already have this peer! */
 			/* implement deletion (some field?) */
 			peers[peer.Name] = peer
-			/* read out peers to peer */
-			/* read out tags to peer */
-			/* read out peer to peers */
+			sendall2peer(peer, peers, scores)
 		case tag := <- tagchan:
 			scores[tag.Name] = tag.Score
-			/* read out tag to peers */
+			sendtag2peers(peers, tag)
 		}
 	}
 }
 
 /*
-pseudofunc updateset(id vt.Score){
-	/* add to my rootblock
-
-	for each p in peers{
-		send syncmsg (peer, id)
-	}
-}
 
 pseudofunc onaddpeer(p peer){
 	for each q in peers{

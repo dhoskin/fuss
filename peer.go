@@ -9,6 +9,8 @@ type Peer struct{
 	Addr string
 	Conn net.Conn
 	VTClnt *vtclnt.Clnt
+	Msgchan chan *Syncmsg
+	Server bool
 }
 
 func newpeer(addr string, conn net.Conn) *Peer{
@@ -17,6 +19,9 @@ func newpeer(addr string, conn net.Conn) *Peer{
 	p.Addr = addr
 	p.Conn = conn
 	p.VTClnt = vtclnt.NewClnt(p.Conn)
+	p.Msgchan = make(chan *Syncmsg, 32)
+
+	/* XXX does the first tpeer need to be first? */
 	vtconnect(p.VTClnt)
 
 	/* add p to peerlist! */

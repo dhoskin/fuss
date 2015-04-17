@@ -92,7 +92,8 @@ func syncmsgproc(peer net.Conn, msgchan chan *Syncmsg, mtx *sync.Mutex) {
 }
 
 func dispatch(myclnt, mysrv, peerconn net.Conn){
-	var peer Peer
+	var peer *Peer
+	var firstpeer bool = true
 	_ = peer
 	/* send Tpeer */
 	/* recv Tpeer */
@@ -136,7 +137,13 @@ func dispatch(myclnt, mysrv, peerconn net.Conn){
 		}
 
 		if(buf[2] >= 18){
-			onsyncmsg(Self.Clnt, syncparse(buf));
+			if firstpeer {
+				firstpeer = false
+				peer = nil //newpeer()
+				Self.Peerchan <- peer
+			}else{
+				onsyncmsg(Self.Clnt, syncparse(buf));
+			}
 		}else if((buf[2] % 2) == 1){
 			myclnt.Write(buf[0:pktsz]);
 		}else{
