@@ -7,7 +7,8 @@ SRCS = \
 	dispatch.go \
 	sync.go \
 	walk.go \
-	peer.go
+	peer.go \
+	conn.go
 
 vtsync: $SRCS
 	go build -o vtsync $SRCS

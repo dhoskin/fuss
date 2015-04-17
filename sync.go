@@ -15,9 +15,7 @@ const(
 // sz[2] Tpeer name[s]
 
 type Syncmsg struct {
-	Id byte
-	Btype byte
-	Score vt.Score
+	vt.Call
 	Name string
 	Peer *Peer
 }
@@ -96,12 +94,12 @@ func sync2wire(buf []byte, msg *Syncmsg) int{
 }
 
 /* XXX should have a way to get from multiple peers. */
-func gotsyncscore(clnt *vtclnt.Clnt, msg *Syncmsg){
+func gotsyncscore(msg *Syncmsg){
 	if vthasblock(clnt, msg.Score, msg.Btype) {
 		return;
 	}
 
-	e := walk(msg.Peer.VTClnt, clnt, msg.Score, msg.Btype)
+	e := walk(msg.Peer, msg.Score, msg.Btype)
 	if e != nil {
 		fmt.Println("gotsyncscore walk: ", e)
 		return
@@ -137,7 +135,7 @@ func sendtag2peers(peers map[string]*Peer, tag Tag){
 	}
 }
 
-func sendall2peer(peer *Peer, peers map[string]*Peer, scores map[string]vt.Scire){
+func sendall2peer(peer *Peer, peers map[string]*Peer, scores map[string]vt.Score){
 	/* read out peers to peer */
 	/* read out tags to peer */
 	/* read out peer to peers */

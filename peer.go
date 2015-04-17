@@ -2,29 +2,28 @@ package main
 
 import "net"
 import "fmt"
-import "code.google.com/p/govt/vt/vtclnt"
+//import "code.google.com/p/govt/vt/vtclnt"
 
 type Peer struct{
+	sync.Mutex
 	Name string
 	Addr string
 	Conn net.Conn
-	VTClnt *vtclnt.Clnt
-	Msgchan chan *Syncmsg
+	Msgchan, Reply chan *Syncmsg
+	Tbuf, Rbuf abuf
 	Server bool
 }
 
-func newpeer(addr string, conn net.Conn) *Peer{
+func newpeer(name, addr string, conn net.Conn) *Peer{
 	p := new(Peer)
 
+	p.Name = name
 	p.Addr = addr
 	p.Conn = conn
-	p.VTClnt = vtclnt.NewClnt(p.Conn)
 	p.Msgchan = make(chan *Syncmsg, 32)
-
-	/* XXX does the first tpeer need to be first? */
-	vtconnect(p.VTClnt)
-
-	/* add p to peerlist! */
+	p.Reply = make(chan *Syncmsg, 32)
+	p.Tbuf = newabuf()
+	p.Rbuf = newabuf()
 
 	return p
 }
