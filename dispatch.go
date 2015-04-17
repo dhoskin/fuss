@@ -69,7 +69,7 @@ func dispatch(myclnt, mysrv, peer net.Conn){
 		}
 
 		if(buf[2] >= 18){
-			msg := syncparse(buf);
+			_ = syncparse(buf);
 		}else if((buf[2] % 2) == 1){
 			myclnt.Write(buf[0:pktsz]);
 		}else{

@@ -1,12 +1,13 @@
-# order matters
+
 SRCS = \
-	vtsync.go \
+	main.go \
 	parsescore.go \
 	entry.go \
 	root.go \
 	dispatch.go \
-	syncmsg.go \
-	coord.go
+	sync.go \
+	walk.go \
+	peer.go
 
 vtsync: $SRCS
-	go build $SRCS
+	go build -o vtsync $SRCS
