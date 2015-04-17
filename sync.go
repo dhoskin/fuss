@@ -11,7 +11,7 @@ const(
 	Rpeer = 23
 )
 
-// sz[2] Thash score[20]
+// sz[2] Thash tag[s] btype[1] score[20]
 // sz[2] Tpeer name[s]
 
 type Syncmsg struct {
@@ -25,7 +25,8 @@ type Syncmsg struct {
 func (s *Syncmsg) String() string {
 	switch s.Id {
 	case Thash:
-		return fmt.Sprintf("Thash %v type %v", s.Score, s.Btype);
+		return fmt.Sprintf("Thash tag %v score %v type %v",
+			s.Name, s.Score, s.Btype);
 	case Tpeer:
 		return fmt.Sprintf("Tpeer %s", s.Name);
 	default:
@@ -48,6 +49,7 @@ func syncparse(buf []byte) *Syncmsg {
 	msg.Id, buf = vt.Gint8(buf);
 	switch(msg.Id){
 	case Thash:
+		msg.Name, buf = vt.Gstr(buf);
 		msg.Btype, buf = vt.Gint8(buf);
 		msg.Score, buf = vt.Gscore(buf);
 	case Tpeer:
@@ -68,6 +70,7 @@ func sync2wire(buf []byte, msg *Syncmsg) int{
 	buf2 := vt.Pint8(msg.Id, buf[2:]);
 	switch(msg.Id){
 	case Thash:
+		buf2 = vt.Pstr(msg.Name, buf2);
 		buf2 = vt.Pint8(msg.Btype, buf2);
 		buf2 = vt.Pscore(msg.Score, buf2);
 	case Tpeer:
@@ -83,7 +86,7 @@ func sync2wire(buf []byte, msg *Syncmsg) int{
 }
 
 /* XXX should have a way to get from multiple peers. */
-func gotsyncscore(clnt *vtclnt.Clnt, msg Syncmsg){
+func gotsyncscore(clnt *vtclnt.Clnt, msg *Syncmsg){
 	if vthasblock(clnt, msg.Score, msg.Btype) {
 		return;
 	}
@@ -94,34 +97,42 @@ func gotsyncscore(clnt *vtclnt.Clnt, msg Syncmsg){
 		return
 	}
 	/* XXX add to score table */
+	fmt.Println("gotsyncscore ", msg.Score,
+		" from ", msg.Peer.Addr);
 }
 
-func syncproc(clnt *vtclnt.Clnt, syncmsg chan Syncmsg){
+func onsyncmsg(clnt *vtclnt.Clnt, msg *Syncmsg){
+	switch msg.Id {
+	case Thash:
+		go gotsyncscore(clnt, msg);
+	case Tpeer:
+		// XXX go addpeer(msg.Name);
+	}
+}
+
+/* We'll need another chan here. */
+/* scorechan and peerchan? */
+/* Still possibly a separate scoremanager interface / proc. */
+/* Interactions: */
+/* Receive syncmsg, simple dispatch. */
+/* New peer from listen() but without full Tpeer yet */
+/* Sync successfully enrolled score in scorelist. */
+func syncproc(peerchan chan *Peer, tagchan chan Tag){
+	var peers = make(map[string]*Peer)
+	var scores = make(map[string]vt.Score)
+	_ = peers
+	_ = scores
 	for {
-		msg := <- syncmsg
-		switch msg.Id {
-		case Thash:
-			go gotsyncscore(clnt, msg);
-		case Tpeer:
-			// XXX go addpeer(msg.Name)
+		select {
+		case peer := <- peerchan:
+			peers[peer.Name] = peer
+		case tag := <- tagchan:
+			scores[tag.Name] = tag.Score
 		}
 	}
 }
 
 /*
-pseudofunc onsyncmsg(id vt.Score){
-	/* we already have this
-	if len(local.Get(id, RootBlock)) > 0 {
-		return;
-	}
-
-	/* start with the one that sent us the message?
-	for each p in peers{
-		if(walk(local, p.srv, id))
-			return updateset(id)
-	}
-}
-
 pseudofunc updateset(id vt.Score){
 	/* add to my rootblock
 

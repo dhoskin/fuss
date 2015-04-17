@@ -34,10 +34,14 @@ func listendispatch(myclnt net.Conn, srvaddr, port string){
 	}
 }
 
-func dispatch(myclnt, mysrv, peer net.Conn){
+func dispatch(myclnt, mysrv, peerconn net.Conn){
+	var peer Peer
+	_ = peer
+	/* send Tpeer */
+	/* recv Tpeer */
 
-	go io.Copy(peer, myclnt);
-	go io.Copy(peer, mysrv);
+	go io.Copy(peerconn, myclnt);
+	go io.Copy(peerconn, mysrv);
 
 	var buf = make([]byte, vt.Maxblock * 2);
 	n := 0;
@@ -45,7 +49,7 @@ func dispatch(myclnt, mysrv, peer net.Conn){
 		pktsz := 0;
 
 		if(n < 2){
-			x, e := io.ReadAtLeast(peer, buf, 2);
+			x, e := io.ReadAtLeast(peerconn, buf, 2);
 			if(e != nil){
 				return;
 			}
@@ -61,7 +65,7 @@ func dispatch(myclnt, mysrv, peer net.Conn){
 			return;
 		}
 		if(n < pktsz){
-			x, e := io.ReadAtLeast(peer, buf, pktsz - n);
+			x, e := io.ReadAtLeast(peerconn, buf, pktsz - n);
 			if(e != nil){
 				return;
 			}
@@ -69,7 +73,7 @@ func dispatch(myclnt, mysrv, peer net.Conn){
 		}
 
 		if(buf[2] >= 18){
-			_ = syncparse(buf);
+			onsyncmsg(Self.Clnt, syncparse(buf));
 		}else if((buf[2] % 2) == 1){
 			myclnt.Write(buf[0:pktsz]);
 		}else{

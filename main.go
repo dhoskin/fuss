@@ -13,6 +13,13 @@ var venti = flag.String("venti", "localhost:17034", "local venti");
 var score = "552dd1ba32295a3daf3925aa4438adb3ed936f18";
 var goatscore = "4aaddcaa3881e818d7b4ae0f1aca647994f4b05f";
 
+var Self struct {
+	Name string
+	Host string
+	Clnt *vtclnt.Clnt
+	Peerchan chan *Peer
+	Tagchan chan Tag
+}
 
 // copied from vtclnt.Connect,
 // so we can use our own socket
@@ -45,18 +52,13 @@ func vtconnect(clnt *vtclnt.Clnt) *vt.Error {
 func main(){
 	flag.Parse();
 
-	src, e := vtclnt.Connect("tcp", *venti);
-	if(e != nil){
-		fmt.Println("could not connect to src: ", e);
-		return;
-	}
-	dst, e := vtclnt.Connect("tcp", "localhost:7034");
-	if(e != nil){
-		fmt.Println("could not connect to src: ", e);
-		return;
-	}
+	_ = Self.Name
 
 	clntpipe, listenpipe := net.Pipe();
+
+	Self.Clnt = vtclnt.NewClnt(clntpipe);
+
+	go syncproc(Self.Peerchan, Self.Tagchan);
 
 	if(*serve){
 		go listendispatch(listenpipe, *venti, *addr);
@@ -67,8 +69,24 @@ func main(){
 		go dialdispatch(listenpipe, *venti, args[i]);
 	}
 
-	clnt := vtclnt.NewClnt(clntpipe);
-	vtconnect(clnt);
+	vtconnect(Self.Clnt);
+
+	myscore, _ := readscore(score);
+	_ = myscore;
+}
+
+/*
+func oldishmain(){
+	src, e := vtclnt.Connect("tcp", *venti);
+	if(e != nil){
+		fmt.Println("could not connect to src: ", e);
+		return;
+	}
+	dst, e := vtclnt.Connect("tcp", "localhost:7034");
+	if(e != nil){
+		fmt.Println("could not connect to dst: ", e);
+		return;
+	}
 
 	myscore, _ := readscore(score);
 
@@ -88,6 +106,7 @@ func main(){
 	fmt.Println("end of main");
 	return;
 }
+*/
 
 func oldmain(){
 	clnt, e := vtclnt.Connect("tcp", "localhost:17034");

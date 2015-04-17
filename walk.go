@@ -4,6 +4,11 @@ import "fmt"
 import "code.google.com/p/govt/vt"
 import "code.google.com/p/govt/vt/vtclnt"
 
+type Tag struct {
+	Name string
+	Score vt.Score
+}
+
 func vthasblock(c *vtclnt.Clnt, hash vt.Score, btype byte) bool{
 	buf, e := c.Get(hash, btype, vt.Maxblock);
 	if(e != nil){
